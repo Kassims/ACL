@@ -1,0 +1,158 @@
+-- Made by AnthonyIsntHere
+-- Anti Chat-Logger temp version
+
+if not game:IsLoaded() then
+    game.Loaded:wait()
+end
+
+local ACL_LoadTime = tick()
+
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local UserInputService = game:GetService("UserInputService")
+local StarterGui = game:GetService("StarterGui")
+local CoreGui = game:GetService("CoreGui")
+
+local Player = Players.LocalPlayer
+local PlayerGui = Player:WaitForChild("PlayerGui")
+local PlayerScripts = Player:WaitForChild("PlayerScripts")
+
+local ChatScript = PlayerScripts:WaitForChild("ChatScript")
+
+local ChatGui = Player:FindFirstChild("Chat")
+local Frame, ChatBarParentFrame, Frame_2, BoxFrame, Frame_3, ChatBar, MessageMode, ChatChannelParentFrame, Frame_MessageLOgDisplay, Scroller
+
+local TopBarApp = CoreGui:WaitForChild("TopBarApp")
+local TopBarFrame = TopBarApp and TopBarApp:WaitForChild("TopBarFrame")
+local LeftFrame = TopBarFrame and TopBarFrame:WaitForChild("LeftFrame")
+local ChatIcon = LeftFrame and LeftFrame:FindFirstChild("ChatIcon")
+local ChatIconButtonRep = Instance.new("TextButton", ChatIcon); ChatIconButtonRep.BackgroundTransparency = 1; ChatIconButtonRep.Text = ""; ChatIconButtonRep.Size = UDim2.new(1, 0, 1, 0); ChatIconButtonRep.ZIndex = 1
+
+local DefaultChatSystemChatEvents = ReplicatedStorage:WaitForChild("DefaultChatSystemChatEvents")
+local SayMessageRequest = DefaultChatSystemChatEvents:WaitForChild("SayMessageRequest")
+
+local CurrentMessage, WhisperTarget, WhisperTargetMessage = "", "", ""
+local Connections = {}
+
+local ReturnPressed = false
+
+local Notify = function(_Title, _Text , Time)
+    StarterGui:SetCore("SendNotification", {Title = _Title, Text = _Text, Icon = "rbxassetid://2541869220", Duration = Time})
+end
+
+if not ChatScript then
+	return warn("ChatScript not found")
+end
+
+if not ChatGui then
+	local Timer = tick()
+
+	repeat 
+		ChatGui = PlayerGui:FindFirstChild("Chat")
+		task.wait()
+	until ChatGui or tick() > (Timer + 5) 
+
+	if not ChatGui then
+		return warn("Legacy Chat not found")
+	end
+end
+
+local GetUIS = function()
+	Frame = ChatGui:WaitForChild("Frame")
+	
+	ChatBarParentFrame = Frame and Frame:WaitForChild("ChatBarParentFrame")
+	Frame_2 = ChatBarParentFrame and ChatBarParentFrame:WaitForChild("Frame")
+	BoxFrame = Frame_2 and Frame_2:WaitForChild("BoxFrame")
+	Frame_3 = BoxFrame and BoxFrame:WaitForChild("Frame")
+	ChatBar = Frame_3 and Frame_3:WaitForChild("ChatBar")
+	MessageMode = Frame_3 and Frame_3:WaitForChild("MessageMode")
+
+	ChatChannelParentFrame = Frame and Frame:WaitForChild("ChatChannelParentFrame")
+	Frame_MessageLOgDisplay = ChatChannelParentFrame and ChatChannelParentFrame:WaitForChild("Frame_MessageLogDisplay")
+	Scroller = Frame_MessageLOgDisplay and Frame_MessageLOgDisplay:WaitForChild("Scroller")
+end
+
+local ChatBarEvents = function()
+	for _, x in next, Connections do
+		if x then
+			x:Disconnect()
+		end
+	end
+
+	if ChatBar then
+		Connections["TextChangedConnection"] = ChatBar:GetPropertyChangedSignal("Text"):Connect(function()
+			CurrentMessage = ChatBar.Text:gsub("^/w .+%s", "")
+			
+			if MessageMode.Text ~= "" then
+				WhisperTarget = MessageMode.Text:split("[To ")[2]:gsub("%]", "")
+				WhisperTargetMessage = "/w " .. WhisperTarget
+			else
+				WhisperTargetMessage = ""
+			end
+		end)
+
+		Connections["FocusLostConnection"] = ChatBar.FocusLost:Connect(function()
+			if ChatBar.Text ~= "" then
+				if ReturnPressed then
+					SayMessageRequest:FireServer(WhisperTargetMessage .. CurrentMessage, "All")
+					ChatBar.Text = ""
+					ChatBar:ReleaseFocus()
+				end
+			end
+		end)
+
+		Connections["MouseEnterConnection"] = Frame.MouseEnter:Connect(function()
+			if Scroller.ScrollBarThickness == 0 then
+				Scroller.ScrollBarThickness = 4
+			end
+			if not Scroller.ScrollingEnabled then
+				Scroller.ScrollingEnabled = true
+			end
+		end)
+		
+		if ChatIcon then
+			Connections["ChatIconConnection"] = ChatIconButtonRep.MouseButton1Click:Connect(function()
+				Frame.Visible = not Frame.Visible
+			end)
+		end
+	else
+		return warn("ChatBar not found")
+	end
+end
+
+ChatScript.Disabled = true
+GetUIS()
+Frame.Visible = true
+ChatBarEvents()
+
+task.spawn(function()
+	while task.wait() do
+		GetUIS()
+	end
+end)
+
+UserInputService.InputBegan:Connect(function(Key, Keyboard)
+	if not Keyboard then
+		if Key.KeyCode == Enum.KeyCode.Slash then
+			ReturnPressed = false
+			ChatBarEvents()
+			ChatBar:CaptureFocus()
+
+			ChatBar:GetPropertyChangedSignal("Text"):wait()
+			if ChatBar.Text:match("^/$") then
+				ChatBar.Text = ""
+			end
+		elseif Key.KeyCode == Enum.KeyCode.Return and ChatBar.IsFocused then
+			ReturnPressed = true
+		end
+	end
+end)
+
+Player.Chatted:Connect(function(msg)
+	if msg ~= "" then
+		Notify("Warning! 🚨", "Leave immediately! | Message Logged: " .. msg, 15)
+	end
+end)
+
+Notify("🔹Anthony's ACL🔹", "Anti Chat-Logger Loaded!", 15)
+print(string.format("AnthonyIsntHere's Anti Chat-Logger has loaded in %s seconds.", string.format("%.2f", tostring(tick() - ACL_LoadTime))))
