@@ -43,7 +43,6 @@ if TextChatService.ChatVersion == Enum.ChatVersion.TextChatService then
         hasExecuted.Value = true
 
         local ACLloadTime = tick() - startTime
-
         print(string.format("ACL successfully loaded in %.2f seconds!", ACLloadTime))
 
         if setfflag then
@@ -53,21 +52,17 @@ if TextChatService.ChatVersion == Enum.ChatVersion.TextChatService then
             end)
         end
 
-        local function AntiChatLog(message)
-            if message:sub(1, 2) == "/e" then
-                return message
-            else
-                return message .. "󠀕"
-            end
-        end
-
-        TextChatService.OnIncomingMessage = function(message)
-            local modifiedMessage = AntiChatLog(message.Text)
-            message.Text = modifiedMessage
+        local generalChannel = TextChatService.TextChannels:FindFirstChild("RBXGeneral")
+        if generalChannel then
+            pcall(function()
+                generalChannel:SendAsync(message)
+            end)
+        else
+            warn("RBXGeneral channel not found.")
         end
     end
 
-    wait(0.21)
+    task.wait(0.21)
     executeScript()
 
     task.spawn(function()
@@ -80,7 +75,9 @@ if TextChatService.ChatVersion == Enum.ChatVersion.TextChatService then
     end)
 
 else
-    if not pcall(function() loadstring(game:HttpGet("https://raw.githubusercontent.com/1price/usercreation/refs/heads/main/workspace/ACL.lua"))() end) then
+    if not pcall(function()
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/1price/usercreation/refs/heads/main/workspace/ACL.lua"))()
+    end) then
         loadstring(game:HttpGet("https://raw.githubusercontent.com/1price/usercreation/refs/heads/main/workspace/ACL.lua"))()
     end
 end
